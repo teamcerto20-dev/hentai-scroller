@@ -66,6 +66,9 @@
     align-self: flex-start;
     border-bottom-left-radius: 4px;
   }
+  .them.jessica { border-left: 3px solid #ff6b6b; }
+  .them.natsuki { border-left: 3px solid #a29bfe; }
+  .them.lily { border-left: 3px solid #fd79a8; }
   .input-bar {
     background: #1a1a1a;
     padding: 10px 12px;
@@ -83,7 +86,7 @@
     font-size: 1rem;
     outline: none;
   }
-  #send {
+  #send, #call-btn {
     background: #007aff;
     border: none;
     color: #fff;
@@ -93,6 +96,7 @@
     font-size: 1.2rem;
     cursor: pointer;
   }
+  #call-btn { background: #34c759; }
   .typing {
     font-style: italic;
     opacity: 0.7;
@@ -100,24 +104,44 @@
     align-self: flex-start;
     margin-left: 10px;
   }
+  .call-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  .call-overlay.active { display: flex; }
+  .call-status { font-size: 1.2rem; }
 </style>
 </head>
 <body>
 <header>
-  <div class="avatar" id="avatar">J</div>
+  <div class="avatar" id="avatar">G</div>
   <div>
     <select id="char-select">
+      <option value="group">Group Chat (all 3)</option>
       <option value="jessica">Jessica (sister, 18+)</option>
       <option value="natsuki">Natsuki (sister, 18+)</option>
       <option value="lily">Lily (mom, 18+)</option>
     </select>
-    <div style="font-size:0.75rem; opacity:0.7;">Adults only • Fictional</div>
+    <div style="font-size:0.75rem; opacity:0.7;">Adults only • Fictional • Voices via browser</div>
   </div>
 </header>
 <div id="chat"></div>
 <div class="input-bar">
   <input id="msg-input" type="text" placeholder="Type something dirty..." autocomplete="off">
+  <button id="call-btn" title="Live call">📞</button>
   <button id="send">➤</button>
+</div>
+<div class="call-overlay" id="call-overlay">
+  <div class="call-status" id="call-status">Call starting...</div>
+  <div id="call-transcript" style="max-width:80%; text-align:center; opacity:0.8;"></div>
+  <button id="end-call" style="background:#ff3b30; color:#fff; border:none; padding:12px 24px; border-radius:20px; font-size:1rem;">End Call</button>
 </div>
 
 <script>
@@ -126,11 +150,17 @@ const input = document.getElementById('msg-input');
 const sendBtn = document.getElementById('send');
 const select = document.getElementById('char-select');
 const avatar = document.getElementById('avatar');
+const callBtn = document.getElementById('call-btn');
+const callOverlay = document.getElementById('call-overlay');
+const callStatus = document.getElementById('call-status');
+const callTranscript = document.getElementById('call-transcript');
+const endCallBtn = document.getElementById('end-call');
 
 const personalities = {
   jessica: {
     name: "Jessica",
     avatar: "J",
+    voice: { pitch: 1.2, rate: 1.0 },
     replies: {
       general: [
         "Mmm fuck, you're texting me again already? I'm still wet from last time...",
@@ -172,6 +202,7 @@ const personalities = {
   natsuki: {
     name: "Natsuki",
     avatar: "N",
+    voice: { pitch: 1.4, rate: 1.1 },
     replies: {
       general: [
         "Heh... you're really texting me like this? I'm already soaked.",
@@ -213,6 +244,7 @@ const personalities = {
   lily: {
     name: "Lily",
     avatar: "L",
+    voice: { pitch: 0.9, rate: 0.95 },
     replies: {
       general: [
         "You shouldn't be texting your mother like this... but I can't stop reading.",
@@ -253,26 +285,40 @@ const personalities = {
   }
 };
 
-let current = "jessica";
+let current = "group";
+let recognition = null;
+let inCall = false;
 
-function addMsg(text, isUser = false) {
-  const div = document.createElement('div');
-  div.className = 'msg ' + (isUser ? 'user' : 'them');
-  div.textContent = text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+function speak(text, person) {
+  if (!window.speechSynthesis) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  const v = personalities[person]?.voice || { pitch: 1, rate: 1 };
+  utter.pitch = v.pitch;
+  utter.rate = v.rate;
+  utter.volume = 1;
+  const voices = speechSynthesis.getVoices();
+  const female = voices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman') || v.lang.startsWith('en'));
+  if (female) utter.voice = female;
+  speechSynthesis.speak(utter);
 }
 
-function getReply(msg) {
-  const p = personalities[current];
+function addMsg(text, isUser = false, person = null) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + (isUser ? 'user' : 'them' + (person ? ' ' + person : ''));
+  div.textContent = (person && !isUser ? personalities[person].name + ': ' : '') + text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  if (!isUser && person) speak(text, person);
+}
+
+function getReply(msg, person) {
+  const p = personalities[person];
   const lower = msg.toLowerCase();
   let pool = p.replies.general;
-
   if (lower.match(/cock|dick|hard|stroke|cum|precum/)) pool = p.replies.cock;
   else if (lower.match(/pussy|wet|clit|finger|drip/)) pool = p.replies.pussy;
   else if (lower.match(/fuck|sex|ride|inside|raw/)) pool = p.replies.fuck;
   else if (lower.match(/edge|stop|deny|hands off|don't cum/)) pool = p.replies.edge;
-
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -282,29 +328,75 @@ function send() {
   addMsg(text, true);
   input.value = '';
 
-  const typing = document.createElement('div');
-  typing.className = 'typing';
-  typing.textContent = personalities[current].name + ' is typing...';
-  chat.appendChild(typing);
-  chat.scrollTop = chat.scrollHeight;
+  if (current === 'group') {
+    const order = ['jessica', 'natsuki', 'lily'];
+    order.forEach((p, i) => {
+      setTimeout(() => {
+        addMsg(getReply(text, p), false, p);
+      }, 600 + i * 900);
+    });
+  } else {
+    setTimeout(() => {
+      addMsg(getReply(text, current), false, current);
+    }, 800);
+  }
+}
 
-  setTimeout(() => {
-    typing.remove();
-    addMsg(getReply(text));
-  }, 800 + Math.random() * 1200);
+function startCall() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('Voice recognition not supported in this browser. Try Chrome.');
+    return;
+  }
+  inCall = true;
+  callOverlay.classList.add('active');
+  callStatus.textContent = 'Listening... say something dirty';
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  recognition.onresult = (e) => {
+    const transcript = e.results[e.results.length - 1][0].transcript;
+    callTranscript.textContent = 'You: ' + transcript;
+    addMsg(transcript, true);
+    if (current === 'group') {
+      ['jessica', 'natsuki', 'lily'].forEach((p, i) => {
+        setTimeout(() => {
+          const reply = getReply(transcript, p);
+          callTranscript.textContent = personalities[p].name + ': ' + reply;
+          addMsg(reply, false, p);
+        }, 800 + i * 1200);
+      });
+    } else {
+      const reply = getReply(transcript, current);
+      callTranscript.textContent = personalities[current].name + ': ' + reply;
+      addMsg(reply, false, current);
+    }
+  };
+  recognition.onerror = () => callStatus.textContent = 'Mic error — try again';
+  recognition.start();
+}
+
+function endCall() {
+  inCall = false;
+  if (recognition) recognition.stop();
+  callOverlay.classList.remove('active');
+  speechSynthesis.cancel();
 }
 
 sendBtn.onclick = send;
 input.onkeydown = (e) => { if (e.key === 'Enter') send(); };
+callBtn.onclick = startCall;
+endCallBtn.onclick = endCall;
 
 select.onchange = () => {
   current = select.value;
-  avatar.textContent = personalities[current].avatar;
+  avatar.textContent = current === 'group' ? 'G' : personalities[current].avatar;
   chat.innerHTML = '';
-  addMsg("Hey... what do you want?", false);
+  addMsg("Hey... what do you want?", false, current === 'group' ? 'jessica' : current);
 };
 
-addMsg("Mmm, you finally texted me. What are you thinking about?", false);
+addMsg("Mmm, you finally texted us. What are you thinking about?", false, 'jessica');
+speechSynthesis.onvoiceschanged = () => {};
 </script>
 </body>
 </html>
