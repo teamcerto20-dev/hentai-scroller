@@ -104,11 +104,12 @@
 </head>
 <body>
 <header>
-  <div class="avatar" id="avatar">BS</div>
+  <div class="avatar" id="avatar">J</div>
   <div>
     <select id="char-select">
-      <option value="sister">Big Sister (18+)</option>
-      <option value="mom">Mother (18+)</option>
+      <option value="jessica">Jessica (sister, 18+)</option>
+      <option value="natsuki">Natsuki (sister, 18+)</option>
+      <option value="lily">Lily (mom, 18+)</option>
     </select>
     <div style="font-size:0.75rem; opacity:0.7;">Adults only • Fictional</div>
   </div>
@@ -127,9 +128,9 @@ const select = document.getElementById('char-select');
 const avatar = document.getElementById('avatar');
 
 const personalities = {
-  sister: {
-    name: "Big Sister",
-    avatar: "BS",
+  jessica: {
+    name: "Jessica",
+    avatar: "J",
     replies: {
       general: [
         "Mmm fuck, you're texting me again already? I'm still wet from last time...",
@@ -168,9 +169,50 @@ const personalities = {
       ]
     }
   },
-  mom: {
-    name: "Mother",
-    avatar: "M",
+  natsuki: {
+    name: "Natsuki",
+    avatar: "N",
+    replies: {
+      general: [
+        "Heh... you're really texting me like this? I'm already soaked.",
+        "What are you thinking about, big bro? Be honest.",
+        "I can't stop touching myself. Your fault.",
+        "Keep going. I'm biting my lip reading this.",
+        "Mmm, say more. I'm dripping."
+      ],
+      cock: [
+        "Tell me how hard your cock is right now.",
+        "I want it in my mouth. Don't hold back.",
+        "Stroke it for me. Slowly. Describe it.",
+        "Fuck, I bet you're leaking all over your hand.",
+        "I want to feel you throb against my tongue."
+      ],
+      pussy: [
+        "My pussy is so wet it's ridiculous.",
+        "I'm fingering myself thinking about you inside me.",
+        "Wish you could taste how wet I am.",
+        "Spread me and use me already.",
+        "I'm dripping down my thighs for you."
+      ],
+      fuck: [
+        "Fuck me hard. I want it raw.",
+        "Deeper. Make me moan your name.",
+        "Cum inside me. I don't care how wrong it is.",
+        "Bend me over and don't stop until I cum.",
+        "I'm so close just from this."
+      ],
+      edge: [
+        "Edge for me. Count to ten then stop.",
+        "Hands off. Don't you dare finish yet.",
+        "Stroke slow. Tease yourself. Tell me when you're close.",
+        "Good. Now stop completely.",
+        "You can edge again. But no cumming."
+      ]
+    }
+  },
+  lily: {
+    name: "Lily",
+    avatar: "L",
     replies: {
       general: [
         "You shouldn't be texting your mother like this... but I can't stop reading.",
@@ -211,7 +253,7 @@ const personalities = {
   }
 };
 
-let current = "sister";
+let current = "jessica";
 
 function addMsg(text, isUser = false) {
   const div = document.createElement('div');
