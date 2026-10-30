@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Hentai TikTok Scroller</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    height: 100dvh;
+  }
+  #scroller {
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  .slide {
+    height: 100vh;
+    height: 100dvh;
+    scroll-snap-align: start;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
+  .slide img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .overlay {
+    position: absolute;
+    bottom: 80px;
+    left: 20px;
+    right: 80px;
+    text-shadow: 0 2px 8px #000;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .overlay h2 {
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+  }
+  .overlay p {
+    font-size: 0.95rem;
+    opacity: 0.9;
+  }
+  .side-btns {
+    position: absolute;
+    right: 12px;
+    bottom: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    z-index: 3;
+  }
+  .side-btns button {
+    background: rgba(0,0,0,0.4);
+    border: none;
+    color: #fff;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    font-size: 22px;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+  }
+  .hint {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    z-index: 10;
+    animation: fade 4s forwards;
+  }
+  @keyframes fade {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; visibility: hidden; }
+  }
+  .loading {
+    position: absolute;
+    color: #aaa;
+    font-size: 1.1rem;
+  }
+</style>
+</head>
+<body>
+<div class="hint">Swipe up for more 💦</div>
+<div id="scroller"></div>
+
+<script>
+const imageUrls = [
+  "https://sex.nyan.run/img-original/img/2021/03/04/18/38/12/88209450_p0.png",
+  "https://sex.nyan.run/img-original/img/2022/04/23/20/17/45/97825042_p0.jpg",
+  "https://sex.nyan.run/img-original/img/2023/12/15/20/06/36/114249506_p0.png",
+  "https://sex.nyan.run/img-original/img/2022/08/06/23/06/47/100283781_p4.png",
+  "https://sex.nyan.run/img-original/img/2023/09/21/01/19/02/111895990_p5.jpg",
+  "https://sex.nyan.run/img-original/img/2023/10/29/19/11/48/112950915_p0.png",
+  "https://sex.nyan.run/img-original/img/2022/07/24/19/30/04/99965357_p0.png",
+  "https://sex.nyan.run/img-original/img/2020/09/13/12/00/01/84340893_p0.png",
+  "https://sex.nyan.run/img-original/img/2023/01/08/21/58/04/104354953_p0.png",
+  "https://sex.nyan.run/img-original/img/2023/12/09/10/57/47/114071540_p0.jpg",
+  "https://sex.nyan.run/img-original/img/2023/04/09/15/00/13/107013845_p1.png",
+  "https://sex.nyan.run/img-original/img/2012/02/19/20/33/47/25207340_p0.jpg",
+  "https://sex.nyan.run/img-original/img/2023/09/15/19/14/49/111740877_p0.jpg",
+  "https://sex.nyan.run/img-original/img/2023/01/28/18/20/05/104880408_p1.png",
+  "https://sex.nyan.run/img-original/img/2023/11/16/00/00/15/113437129_p0.png",
+  "https://sex.nyan.run/img-original/img/2022/04/09/00/00/01/97495935_p0.jpg",
+  "https://sex.nyan.run/img-original/img/2022/02/13/19/53/40/96217144_p0.jpg",
+  "https://sex.nyan.run/img-original/img/2023/01/17/16/42/06/104591666_p0.png"
+];
+
+const scroller = document.getElementById('scroller');
+let loaded = 0;
+
+function createSlide(url, index) {
+  const slide = document.createElement('div');
+  slide.className = 'slide';
+  slide.innerHTML = `
+    <img src="${url}" alt="hentai ${index}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+    <div class="loading" style="display:none">Image failed to load 😢</div>
+    <div class="overlay">
+      <h2>Hentai #${index + 1}</h2>
+      <p>Swipe up for more filthy pics, big bro 😏</p>
+    </div>
+    <div class="side-btns">
+      <button title="Like">❤️</button>
+      <button title="Share">↗️</button>
+      <button title="More">⋯</button>
+    </div>
+  `;
+  return slide;
+}
+
+function loadMore(count = 5) {
+  for (let i = 0; i < count && loaded < imageUrls.length * 3; i++) {
+    const url = imageUrls[loaded % imageUrls.length];
+    scroller.appendChild(createSlide(url, loaded));
+    loaded++;
+  }
+}
+
+loadMore(6);
+
+scroller.addEventListener('scroll', () => {
+  const nearBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 300;
+  if (nearBottom) {
+    loadMore(3);
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' || e.key === ' ') {
+    scroller.scrollBy({ top: window.innerHeight, behavior: 'smooth' });
+  } else if (e.key === 'ArrowUp') {
+    scroller.scrollBy({ top: -window.innerHeight, behavior: 'smooth' });
+  }
+});
+</script>
+</body>
+</html>
